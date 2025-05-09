@@ -57,8 +57,6 @@ app.command('/swift-coffees-generate', async ({ command, ack, client, say, respo
     }
     
     try {
-        await say(`Got it! Fetching members from <#${SLACK_CHANNEL_ID}> and brewing some coffee chats... ☕`);
-
         const users = await getChannelMembers(client, SLACK_CHANNEL_ID);
 
         if (users.length < 2) {
@@ -72,6 +70,8 @@ app.command('/swift-coffees-generate', async ({ command, ack, client, say, respo
             await respond("Could not form any coffee groups.");
             return;
         }
+
+        console.log('results', { users, groups })
 
         let resultsMessage = "✨ Swift Coffee Chats for this week are ready! ✨\n\n";
         let allEventsScheduled = true;

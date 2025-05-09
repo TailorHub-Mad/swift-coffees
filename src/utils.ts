@@ -62,35 +62,63 @@ async function getChannelMembers(client: WebClient, channelId: string): Promise<
 
 /**
  * Creates groups of a specified size from a list of users.
- * The last group may be smaller if the total number of users is not a multiple of groupSize.
+ * Handles odd numbers of members by creating slightly larger groups when necessary.
  */
 function createGroups(users: SlackUser[], groupSize: number): CoffeeGroup[] {
     if (users.length === 0) return [];
 
     const shuffledUsers = shuffleArray([...users]);
     const groups: CoffeeGroup[] = [];
-    for (let i = 0; i < shuffledUsers.length; i += groupSize) {
-        const groupMembers = shuffledUsers.slice(i, i + groupSize);
-        if (groupMembers.length > 0) { // Ensure no empty groups are added
-             groups.push({ members: groupMembers });
-        }
-    }
     
-    // Handle remainders: if the last group is too small (e.g., 1 person when groupSize is 4)
-    // and there are other groups, try to distribute.
-    // For simplicity here, we'll allow smaller final groups.
-    // A more sophisticated approach might merge a single remaining user into another group.
-    if (groups.length > 1) {
-        const lastGroup = groups[groups.length - 1];
-        const secondLastGroup = groups[groups.length - 2];
-        // If last group has 1 person and other groups exist, and preferred group size > 2
-        if (lastGroup.members.length === 1 && groupSize > 2 && groups.length > 1) {
-             console.log(`Last group has only 1 member. Merging with the previous group.`);
-             secondLastGroup.members.push(...lastGroup.members);
-             groups.pop(); // Remove the last group of 1
+    // If we have an odd number of total users, we'll need to handle special cases
+    const totalUsers = shuffledUsers.length;
+    const remainder = totalUsers % groupSize;
+    
+    // Special cases handling
+    if (remainder === 1 && totalUsers > groupSize) {
+        // If we have one person left over, create one group of 3 and the rest as pairs
+        const firstGroup = shuffledUsers.slice(0, 3);
+        groups.push({ members: firstGroup });
+        
+        // Create the remaining groups of the standard size
+        for (let i = 3; i < shuffledUsers.length; i += groupSize) {
+            const groupMembers = shuffledUsers.slice(i, i + groupSize);
+            if (groupMembers.length > 0) {
+                groups.push({ members: groupMembers });
+            }
+        }
+    } else if (remainder === 0) {
+        // Perfect division case - create groups of the standard size
+        for (let i = 0; i < shuffledUsers.length; i += groupSize) {
+            const groupMembers = shuffledUsers.slice(i, i + groupSize);
+            if (groupMembers.length > 0) {
+                groups.push({ members: groupMembers });
+            }
+        }
+    } else {
+        // For other cases (like 5 people), distribute them more evenly
+        const numStandardGroups = Math.floor(totalUsers / groupSize);
+        const totalLargerGroups = remainder > numStandardGroups ? 1 : remainder;
+        let currentIndex = 0;
+
+        // Create larger groups first
+        for (let i = 0; i < totalLargerGroups; i++) {
+            const groupMembers = shuffledUsers.slice(currentIndex, currentIndex + groupSize + 1);
+            groups.push({ members: groupMembers });
+            currentIndex += groupSize + 1;
+        }
+
+        // Create remaining standard-sized groups
+        while (currentIndex < shuffledUsers.length) {
+            const groupMembers = shuffledUsers.slice(currentIndex, currentIndex + groupSize);
+            if (groupMembers.length > 0) {
+                groups.push({ members: groupMembers });
+            }
+            currentIndex += groupSize;
         }
     }
-    console.log(`Created ${groups.length} groups.`);
+
+    console.log(`Created ${groups.length} groups with the following sizes: ${groups.map(g => g.members.length).join(', ')}`);
     return groups;
 }
 
