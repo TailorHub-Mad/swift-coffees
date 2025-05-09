@@ -1,5 +1,4 @@
 import { App, LogLevel } from '@slack/bolt';
-import { WebClient } from '@slack/web-api';
 import { google, calendar_v3 } from 'googleapis';
 import dotenv from 'dotenv';
 
@@ -10,9 +9,9 @@ dotenv.config();
 
 const SLACK_BOT_TOKEN = process.env.SLACK_BOT_TOKEN;
 const SLACK_SIGNING_SECRET = process.env.SLACK_SIGNING_SECRET;
-const SLACK_APP_TOKEN = process.env.SLACK_APP_TOKEN; // Required for Socket Mode
-const SLACK_CHANNEL_ID = process.env.SLACK_CHANNEL_ID; // ID of #swift-coffees
-const GOOGLE_SERVICE_ACCOUNT_KEY_PATH = process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH; // Path to your Google service account JSON key file
+const SLACK_APP_TOKEN = process.env.SLACK_APP_TOKEN; // @note: required for Socket Mode
+const SLACK_CHANNEL_ID = process.env.SLACK_CHANNEL_ID; // @note: ID of #swift-coffees
+const GOOGLE_SERVICE_ACCOUNT_KEY_PATH = process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH; // @note: path to your Google service account JSON key file
 
 
 if (!SLACK_BOT_TOKEN || !SLACK_SIGNING_SECRET || !SLACK_APP_TOKEN || !SLACK_CHANNEL_ID) {
@@ -78,9 +77,8 @@ app.command('/swift-coffees-generate', async ({ command, ack, client, say, respo
         let allEventsScheduled = true;
 
         const now = new Date();
-        // Optional: Schedule for a specific time, e.g., next working day at a certain hour
-        // For simplicity, scheduling immediately or slightly in the future
         const meetingStartTime = new Date(now.getTime() + MINUTES_UNTIL_START * 60000); // Start in 5 minutes
+        // @to-do review if we want the meeting to always be at the same time on Wednesdays for example
 
         for (let i = 0; i < groups.length; i++) {
             const group = groups[i];
