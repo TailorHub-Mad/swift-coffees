@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 
 import { createGoogleMeetEvent, createGroups, getChannelMembers } from './utils';
 import { GROUP_SIZE, MEET_DURATION, MINUTES_UNTIL_START } from './constants';
+import { CoffeeScheduler } from './scheduler';
 
 dotenv.config();
 
@@ -29,6 +30,7 @@ const app = new App({
 });
 
 let calendarApi: calendar_v3.Calendar | null = null;
+let coffeeScheduler: CoffeeScheduler | null = null;
 
 // --- Slack Command Handler ---
 // Listens for a slash command (e.g., /swift-coffees-generate)
@@ -63,13 +65,13 @@ app.command('/swift-coffees-generate', async ({ command, ack, client, say, respo
 
         console.log('results', { users, groups })
 
-        let resultsMessage = "✨ Swift Coffee Chats for this week are ready! ✨\n\n";
+        let resultsMessage = "✨ **Manual Swift Coffee Chats** ✨\n";
+        resultsMessage += "_Generated on demand!_\n\n";
         let allEventsScheduled = true;
         let hasErrors = false;
 
         const now = new Date();
-        const meetingStartTime = new Date(now.getTime() + MINUTES_UNTIL_START * 60000); // Start in 5 minutes
-        // @to-do review if we want the meeting to always be at the same time on Wednesdays for example
+        const meetingStartTime = new Date(now.getTime() + MINUTES_UNTIL_START * 60000); // Start in 15 minutes
 
         for (let i = 0; i < groups.length; i++) {
             const group = groups[i];
@@ -105,11 +107,11 @@ app.command('/swift-coffees-generate', async ({ command, ack, client, say, respo
         }
         
         if (allEventsScheduled && calendarApi) {
-             resultsMessage += "\nAll Google Meet events have been scheduled successfully!";
+             resultsMessage += "\n✅ All Google Meet events have been scheduled successfully!";
         } else if (calendarApi) {
-            resultsMessage += "\nSome Google Meet events could not be scheduled. Please check details above.";
+            resultsMessage += "\n⚠️ Some Google Meet events could not be scheduled. Please check details above.";
         } else {
-            resultsMessage += "\nGoogle Meet creation was skipped as the Calendar API is not configured.";
+            resultsMessage += "\n📝 Google Meet creation was skipped as the Calendar API is not configured.";
         }
 
         // Only post to channel if there were no errors
@@ -129,6 +131,31 @@ app.command('/swift-coffees-generate', async ({ command, ack, client, say, respo
     }
 });
 
+// Command to manually trigger the coffee shuffle (using scheduler logic)
+app.command('/swift-coffees-trigger-now', async ({ command, ack, respond }) => {
+    await ack();
+
+    if (!SLACK_CHANNEL_ID) {
+        await respond("Error: SLACK_CHANNEL_ID is not configured. Please tell the bot admin.");
+        return;
+    }
+
+    try {
+        if (!coffeeScheduler) {
+            coffeeScheduler = new CoffeeScheduler({
+                slackApp: app,
+                calendarApi: calendarApi,
+                channelId: SLACK_CHANNEL_ID
+            });
+        }
+
+        await respond("🎲 Triggering coffee shuffle now...");
+        await coffeeScheduler.triggerCoffeeShuffle();
+    } catch (error) {
+        console.error("Error triggering coffee shuffle:", error);
+        await respond(`Failed to trigger coffee shuffle: ${(error as Error).message}`);
+    }
+});
 
 // --- Start the Bot ---
 (async () => {
@@ -162,6 +189,31 @@ app.command('/swift-coffees-generate', async ({ command, ack, client, say, respo
         // Now start the Slack app
         await app.start();
         console.log('⚡️ Bolt app is running in Socket Mode!');
+        
+        // Initialize and start the coffee scheduler
+        if (SLACK_CHANNEL_ID) {
+            try {
+                console.log('🗓️ Initializing Coffee Scheduler...');
+                coffeeScheduler = new CoffeeScheduler({
+                    slackApp: app,
+                    calendarApi: calendarApi,
+                    channelId: SLACK_CHANNEL_ID
+                });
+                
+                // Automatically start the weekly schedule
+                coffeeScheduler.startWeeklySchedule();
+                console.log('✅ Coffee Scheduler initialized and weekly schedule started!');
+                
+                // Update scheduler with calendar API if it was initialized
+                if (calendarApi) {
+                    coffeeScheduler.updateCalendarApi(calendarApi);
+                }
+            } catch (error) {
+                console.error('❌ Failed to initialize Coffee Scheduler:', error);
+            }
+        } else {
+            console.warn('⚠️ SLACK_CHANNEL_ID not set. Coffee Scheduler will not be initialized.');
+        }
         
         if (!calendarApi && GOOGLE_SERVICE_ACCOUNT_KEY_PATH) {
              console.warn("Google Calendar API failed to initialize during startup. Meet creation will be affected.");
