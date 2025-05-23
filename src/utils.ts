@@ -63,9 +63,14 @@ async function getChannelMembers(client: WebClient, channelId: string): Promise<
 /**
  * Creates groups of a specified size from a list of users.
  * Handles odd numbers of members by creating slightly larger groups when necessary.
+ * Ensures no single-person groups are created.
  */
 function createGroups(users: SlackUser[], groupSize: number): CoffeeGroup[] {
     if (users.length === 0) return [];
+    if (users.length === 1) {
+        console.warn("Cannot create groups with only one user.");
+        return [];
+    }
 
     const shuffledUsers = shuffleArray([...users]);
     const groups: CoffeeGroup[] = [];
@@ -74,18 +79,40 @@ function createGroups(users: SlackUser[], groupSize: number): CoffeeGroup[] {
     const totalUsers = shuffledUsers.length;
     const remainder = totalUsers % groupSize;
     
+    // Handle small group cases (2 or 3 people total)
+    if (totalUsers <= 3) {
+        groups.push({ members: shuffledUsers });
+        return groups;
+    }
+    
     // Special cases handling
-    if (remainder === 1 && totalUsers > groupSize) {
-        // If we have one person left over, create one group of 3 and the rest as pairs
-        const firstGroup = shuffledUsers.slice(0, 3);
-        groups.push({ members: firstGroup });
+    if (remainder === 1) {
+        // If we have one person left over, create two groups with one extra person each
+        // This ensures no one is left alone
+        const group1 = shuffledUsers.slice(0, groupSize + 1);
+        groups.push({ members: group1 });
         
-        // Create the remaining groups of the standard size
-        for (let i = 3; i < shuffledUsers.length; i += groupSize) {
-            const groupMembers = shuffledUsers.slice(i, i + groupSize);
+        let currentIndex = groupSize + 1;
+        
+        // Distribute remaining users
+        while (currentIndex < shuffledUsers.length) {
+            const remainingUsers = shuffledUsers.length - currentIndex;
+            
+            // For the last group, ensure it has at least 2 members
+            if (remainingUsers < groupSize && remainingUsers < 2) {
+                // Take the last person and add them to the previous group
+                const lastPerson = shuffledUsers.slice(currentIndex);
+                const previousGroup = groups[groups.length - 1];
+                previousGroup.members = [...previousGroup.members, ...lastPerson];
+                break;
+            }
+            
+            // Otherwise create a normal sized group
+            const groupMembers = shuffledUsers.slice(currentIndex, currentIndex + groupSize);
             if (groupMembers.length > 0) {
                 groups.push({ members: groupMembers });
             }
+            currentIndex += groupSize;
         }
     } else if (remainder === 0) {
         // Perfect division case - create groups of the standard size
@@ -96,7 +123,7 @@ function createGroups(users: SlackUser[], groupSize: number): CoffeeGroup[] {
             }
         }
     } else {
-        // For other cases (like 5 people), distribute them more evenly
+        // For other cases (like 5 people with group size 3), distribute them more evenly
         const numStandardGroups = Math.floor(totalUsers / groupSize);
         const totalLargerGroups = remainder > numStandardGroups ? 1 : remainder;
         let currentIndex = 0;
@@ -108,14 +135,54 @@ function createGroups(users: SlackUser[], groupSize: number): CoffeeGroup[] {
             currentIndex += groupSize + 1;
         }
 
-        // Create remaining standard-sized groups
-        while (currentIndex < shuffledUsers.length) {
-            const groupMembers = shuffledUsers.slice(currentIndex, currentIndex + groupSize);
-            if (groupMembers.length > 0) {
+        // Create remaining standard-sized groups, ensuring the last group has at least 2 people
+        let remainingUsers = shuffledUsers.length - currentIndex;
+        let remainingGroups = Math.ceil(remainingUsers / groupSize);
+        
+        // If the last group would have just 1 person, redistribute
+        if (remainingUsers % groupSize === 1 && remainingGroups > 1) {
+            // Create groups of size (groupSize) until we reach the last two groups
+            while (currentIndex < shuffledUsers.length - (groupSize + 1)) {
+                const groupMembers = shuffledUsers.slice(currentIndex, currentIndex + groupSize);
                 groups.push({ members: groupMembers });
+                currentIndex += groupSize;
             }
-            currentIndex += groupSize;
+            
+            // Create a final group with the remaining people (will be size groupSize+1)
+            const finalGroupMembers = shuffledUsers.slice(currentIndex);
+            if (finalGroupMembers.length > 0) {
+                groups.push({ members: finalGroupMembers });
+            }
+        } else {
+            // Standard distribution for the remaining users
+            while (currentIndex < shuffledUsers.length) {
+                const groupMembers = shuffledUsers.slice(currentIndex, currentIndex + groupSize);
+                if (groupMembers.length > 0) {
+                    groups.push({ members: groupMembers });
+                }
+                currentIndex += groupSize;
+            }
         }
+    }
+
+    // Final safety check: ensure no groups of size 1
+    const singlePersonGroups = groups.filter(group => group.members.length === 1);
+    if (singlePersonGroups.length > 0) {
+        // Redistribute single-person groups by merging them into other groups
+        const validGroups = groups.filter(group => group.members.length > 1);
+        const singlePersons = singlePersonGroups.flatMap(group => group.members);
+        
+        // Distribute single persons across existing groups
+        singlePersons.forEach((person, index) => {
+            if (validGroups.length > 0) {
+                const targetGroupIndex = index % validGroups.length;
+                validGroups[targetGroupIndex].members.push(person);
+            }
+        });
+        
+        // Replace the original groups array with our fixed groups
+        groups.length = 0;
+        validGroups.forEach(group => groups.push(group));
     }
 
     console.log(`Created ${groups.length} groups with the following sizes: ${groups.map(g => g.members.length).join(', ')}`);

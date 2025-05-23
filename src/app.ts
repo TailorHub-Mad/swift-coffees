@@ -12,6 +12,7 @@ const SLACK_SIGNING_SECRET = process.env.SLACK_SIGNING_SECRET;
 const SLACK_APP_TOKEN = process.env.SLACK_APP_TOKEN; // @note: required for Socket Mode
 const SLACK_CHANNEL_ID = process.env.SLACK_CHANNEL_ID; // @note: ID of #swift-coffees
 const GOOGLE_SERVICE_ACCOUNT_KEY_PATH = process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH; // @note: path to your Google service account JSON key file
+const GOOGLE_DELEGATED_USER = process.env.GOOGLE_DELEGATED_USER || 'tools@tailor-hub.com'; // Service account will impersonate this user
 
 
 if (!SLACK_BOT_TOKEN || !SLACK_SIGNING_SECRET || !SLACK_APP_TOKEN || !SLACK_CHANNEL_ID) {
@@ -29,23 +30,6 @@ const app = new App({
 
 let calendarApi: calendar_v3.Calendar | null = null;
 
-if (GOOGLE_SERVICE_ACCOUNT_KEY_PATH) {
-    try {
-        const auth = new google.auth.GoogleAuth({
-            keyFile: GOOGLE_SERVICE_ACCOUNT_KEY_PATH,
-            scopes: ['https://www.googleapis.com/auth/calendar.events'],
-        });
-        calendarApi = google.calendar({ version: 'v3', auth });
-        console.log("Google Calendar API initialized successfully.");
-    } catch (error) {
-        console.error("Failed to initialize Google Calendar API:", error);
-        calendarApi = null; // Ensure it's null if setup fails
-    }
-} else {
-    console.warn("GOOGLE_SERVICE_ACCOUNT_KEY_PATH not set. Google Meet creation will be disabled.");
-}
-
-
 // --- Slack Command Handler ---
 // Listens for a slash command (e.g., /swift-coffees-generate)
 app.command('/swift-coffees-generate', async ({ command, ack, client, say, respond }) => {
@@ -53,6 +37,12 @@ app.command('/swift-coffees-generate', async ({ command, ack, client, say, respo
 
     if (!SLACK_CHANNEL_ID) {
         await respond("Error: SLACK_CHANNEL_ID is not configured. Please tell the bot admin.");
+        return;
+    }
+    
+    // Check if calendarApi is null after initialization attempt
+    if (GOOGLE_SERVICE_ACCOUNT_KEY_PATH && !calendarApi) {
+        await respond("Google Calendar API is not initialized yet or failed to initialize. Please try again in a few moments or check the logs.");
         return;
     }
     
@@ -75,6 +65,7 @@ app.command('/swift-coffees-generate', async ({ command, ack, client, say, respo
 
         let resultsMessage = "✨ Swift Coffee Chats for this week are ready! ✨\n\n";
         let allEventsScheduled = true;
+        let hasErrors = false;
 
         const now = new Date();
         const meetingStartTime = new Date(now.getTime() + MINUTES_UNTIL_START * 60000); // Start in 5 minutes
@@ -89,8 +80,10 @@ app.command('/swift-coffees-generate', async ({ command, ack, client, say, respo
                  if (group.members.filter(m => m.email).length < 1 && group.members.length >=1 ) { // if there are members but none have email
                     resultsMessage += `  🔴 Could not create Google Meet: No members in this group have email addresses configured in their Slack profiles.\n`;
                     allEventsScheduled = false;
+                    hasErrors = true;
                 } else if (group.members.length === 0) {
                      resultsMessage += `  🟡 This group is empty (this shouldn't happen, please check bot logs).\n`;
+                     hasErrors = true;
                 }
                 else {
                     const eventDetails = await createGoogleMeetEvent(group, meetingStartTime, MEET_DURATION, calendarApi);
@@ -101,6 +94,7 @@ app.command('/swift-coffees-generate', async ({ command, ack, client, say, respo
                     } else {
                         resultsMessage += `  🔴 Error creating Google Meet: ${eventDetails.error || 'Unknown error'}\n`;
                         allEventsScheduled = false;
+                        hasErrors = true;
                     }
                 }
             } else {
@@ -118,11 +112,16 @@ app.command('/swift-coffees-generate', async ({ command, ack, client, say, respo
             resultsMessage += "\nGoogle Meet creation was skipped as the Calendar API is not configured.";
         }
 
-        // Post results to the channel where command was invoked, or to a specific channel
-        await say({
-            channel: command.channel_id, // Post in the channel where command was used
-            text: resultsMessage,
-        });
+        // Only post to channel if there were no errors
+        if (!hasErrors) {
+            await say({
+                channel: command.channel_id, // Post in the channel where command was used
+                text: resultsMessage,
+            });
+        } else {
+            // Use respond to reply directly to the user instead of posting to the channel
+            await respond(resultsMessage);
+        }
 
     } catch (error) {
         console.error("Error in /swift-coffees-generate command:", error);
@@ -134,8 +133,36 @@ app.command('/swift-coffees-generate', async ({ command, ack, client, say, respo
 // --- Start the Bot ---
 (async () => {
     try {
+        // Initialize Google Calendar API first if configured
+        if (GOOGLE_SERVICE_ACCOUNT_KEY_PATH) {
+            try {
+                console.log("Initializing Google Calendar API with delegated user...");
+                const auth = new google.auth.GoogleAuth({
+                    keyFile: GOOGLE_SERVICE_ACCOUNT_KEY_PATH,
+                    scopes: ['https://www.googleapis.com/auth/calendar', 'https://www.googleapis.com/auth/calendar.events'],
+                });
+                
+                // Get the auth client and set domain-wide delegation
+                const authClient = await auth.getClient();
+                (authClient as any).subject = GOOGLE_DELEGATED_USER; // Impersonate this user for domain-wide delegation
+                
+                calendarApi = google.calendar({
+                    version: 'v3',
+                    auth: authClient as any
+                });
+                console.log(`Google Calendar API initialized successfully with delegated user: ${GOOGLE_DELEGATED_USER}`);
+            } catch (error) {
+                console.error("Failed to initialize Google Calendar API:", error);
+                calendarApi = null; // Ensure it's null if setup fails
+            }
+        } else {
+            console.warn("GOOGLE_SERVICE_ACCOUNT_KEY_PATH not set. Google Meet creation will be disabled.");
+        }
+        
+        // Now start the Slack app
         await app.start();
         console.log('⚡️ Bolt app is running in Socket Mode!');
+        
         if (!calendarApi && GOOGLE_SERVICE_ACCOUNT_KEY_PATH) {
              console.warn("Google Calendar API failed to initialize during startup. Meet creation will be affected.");
         }
