@@ -16,7 +16,7 @@ services:
         sync: false
       - key: SLACK_CHANNEL_ID
         sync: false
-      - key: GOOGLE_SERVICE_ACCOUNT_KEY_PATH
+      - key: GOOGLE_SERVICE_ACCOUNT_JSON
         sync: false
       - key: GOOGLE_DELEGATED_USER
         sync: false 

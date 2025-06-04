@@ -39,7 +39,7 @@ SLACK_BOT_TOKEN=xoxb-your-bot-token
 SLACK_SIGNING_SECRET=your-signing-secret
 SLACK_APP_TOKEN=xapp-your-app-token
 SLACK_CHANNEL_ID=your-channel-id
-GOOGLE_SERVICE_ACCOUNT_KEY_PATH=path/to/service-account.json
+GOOGLE_SERVICE_ACCOUNT_JSON=your-json-minified
 GOOGLE_DELEGATED_USER=user@yourdomain.com
 ```
 

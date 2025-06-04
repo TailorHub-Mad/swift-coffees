@@ -6,7 +6,6 @@
     "start": "node dist/app.js",
     "dev": "ts-node src/app.ts",
     "build": "tsc",
-    "postbuild": "cp swift-coffees-google-calendar.json dist/ 2>/dev/null || true",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "engines": {
