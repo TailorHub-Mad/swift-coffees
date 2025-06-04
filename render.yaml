@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: swifty-slack-bot
+    env: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: node dist/app.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: SLACK_BOT_TOKEN
+        sync: false
+      - key: SLACK_SIGNING_SECRET
+        sync: false
+      - key: SLACK_APP_TOKEN
+        sync: false
+      - key: SLACK_CHANNEL_ID
+        sync: false
+      - key: GOOGLE_SERVICE_ACCOUNT_KEY_PATH
+        sync: false
+      - key: GOOGLE_DELEGATED_USER
+        sync: false 

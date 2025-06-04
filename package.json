@@ -1,11 +1,17 @@
 {
   "name": "swifty",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "dist/app.js",
   "scripts": {
-    "start": "ts-node src/app.ts",
+    "start": "node dist/app.js",
+    "dev": "ts-node src/app.ts",
     "build": "tsc",
+    "postbuild": "cp swift-coffees-google-calendar.json dist/ 2>/dev/null || true",
     "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
   },
   "keywords": [],
   "author": "",
