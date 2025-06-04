@@ -1,6 +1,7 @@
 import { App, LogLevel } from '@slack/bolt';
 import { google, calendar_v3 } from 'googleapis';
 import dotenv from 'dotenv';
+import http from 'http';
 
 import { createGoogleMeetEvent, createGroups, getChannelMembers } from './utils';
 import { GROUP_SIZE, MEET_DURATION, MINUTES_UNTIL_START } from './constants';
@@ -156,6 +157,25 @@ app.command('/swift-coffees-trigger-now', async ({ command, ack, respond }) => {
     }
 });
 
+// Simple HTTP server for health checks (required by Fly.io)
+const healthServer = http.createServer((req, res) => {
+    if (req.url === '/health') {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ 
+            status: 'healthy', 
+            timestamp: new Date().toISOString(),
+            services: {
+                slack: app ? 'connected' : 'disconnected',
+                calendar: calendarApi ? 'initialized' : 'not_initialized',
+                scheduler: coffeeScheduler ? 'running' : 'not_running'
+            }
+        }));
+    } else {
+        res.writeHead(404, { 'Content-Type': 'text/plain' });
+        res.end('Not Found');
+    }
+});
+
 (async () => {
     try {
         if (GOOGLE_SERVICE_ACCOUNT_JSON) {
@@ -193,7 +213,13 @@ app.command('/swift-coffees-trigger-now', async ({ command, ack, respond }) => {
         }
         
         await app.start();
-        console.log('⚡️ Bolt app is running in Socket Mode!');
+        console.log('⚡️ Swifty app is running in Socket Mode!');
+        
+        // Start health check server for Fly.io
+        const PORT = process.env.PORT || 8080;
+        healthServer.listen(PORT, () => {
+            console.log(`🏥 Health check server running on port ${PORT}`);
+        });
         
         if (SLACK_CHANNEL_ID) {
             try {

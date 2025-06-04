@@ -128,3 +128,89 @@ node dist/app.js
 ## License
 
 ISC 
+
+## Deployment to Fly.io
+
+### Prerequisites
+
+1. **Install Fly.io CLI:**
+   ```bash
+   curl -L https://fly.io/install.sh | sh
+   ```
+
+2. **Sign up and login to Fly.io:**
+   ```bash
+   flyctl auth signup  # or flyctl auth login if you have an account
+   ```
+
+### Deploy Steps
+
+1. **Launch your app (first time only):**
+   ```bash
+   flyctl launch
+   ```
+   - Choose a unique app name (or accept the generated one)
+   - Select a region close to you
+   - Don't deploy immediately when prompted
+
+2. **Set your environment variables:**
+   ```bash
+   flyctl secrets set SLACK_BOT_TOKEN="your_slack_bot_token"
+   flyctl secrets set SLACK_SIGNING_SECRET="your_slack_signing_secret"
+   flyctl secrets set SLACK_APP_TOKEN="your_slack_app_token"
+   flyctl secrets set SLACK_CHANNEL_ID="your_slack_channel_id"
+   flyctl secrets set GOOGLE_SERVICE_ACCOUNT_JSON='{"type":"service_account",...}'
+   flyctl secrets set GOOGLE_DELEGATED_USER="your-email@domain.com"
+   ```
+
+3. **Deploy:**
+   ```bash
+   ./deploy.sh
+   ```
+   Or manually:
+   ```bash
+   flyctl deploy
+   ```
+
+### Monitoring
+
+- **Check app status:** `flyctl status`
+- **View logs:** `flyctl logs`
+- **Health check:** Your app will be available at `https://your-app-name.fly.dev/health`
+
+### Environment Variables
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `SLACK_BOT_TOKEN` | Your Slack bot token | ✅ |
+| `SLACK_SIGNING_SECRET` | Your Slack app signing secret | ✅ |
+| `SLACK_APP_TOKEN` | Your Slack app token (for Socket Mode) | ✅ |
+| `SLACK_CHANNEL_ID` | The Slack channel ID for coffee chats | ✅ |
+| `GOOGLE_SERVICE_ACCOUNT_JSON` | Google service account credentials (JSON) | ⚠️ Optional* |
+| `GOOGLE_DELEGATED_USER` | Email to impersonate for calendar access | ⚠️ Optional* |
+
+*Google credentials are optional but required for Google Meet creation.
+
+### Cost
+
+Fly.io offers a generous free tier that should cover this background worker application. The app uses minimal resources as it only:
+- Maintains a Socket Mode connection to Slack
+- Runs weekly scheduled tasks
+- Serves health check requests
+
+### Troubleshooting
+
+1. **Check logs if the app isn't working:**
+   ```bash
+   flyctl logs --tail
+   ```
+
+2. **Restart the app:**
+   ```bash
+   flyctl apps restart your-app-name
+   ```
+
+3. **Scale down/up if needed:**
+   ```bash
+   flyctl scale count 1
+   ``` 
