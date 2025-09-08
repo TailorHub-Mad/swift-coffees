@@ -1,6 +1,6 @@
-# Swift Coffees - Vercel Deployment Guide
+# Swift Coffees - Vercel Serverless
 
-This application has been refactored to run as a serverless function on Vercel with automated weekly cron scheduling.
+A minimal serverless application that automatically creates weekly coffee chat groups in Slack with Google Meet integration. Runs on Vercel with cron scheduling.
 
 ## 🚀 Quick Deployment
 
@@ -74,11 +74,12 @@ The original application ran as a persistent Slack bot with socket mode. The Ver
 
 ### Key Files:
 
-- `api/coffee-shuffle.ts`: Main function that creates groups and schedules meetings
+- `api/coffee-shuffle.ts`: Main serverless function (triggered by cron)
 - `api/health.ts`: Health check endpoint
 - `vercel.json`: Vercel configuration with cron job setup
-- `src/utils.ts`: Reusable utility functions (unchanged)
-- `src/constants.ts`: Configuration constants (unchanged)
+- `src/utils.ts`: Core utility functions
+- `src/constants.ts`: Configuration constants
+- `src/types.ts`: TypeScript interfaces
 
 ## 🔍 Monitoring
 

@@ -1,12 +1,9 @@
 {
   "name": "swift-coffees",
   "version": "1.0.0",
-  "main": "dist/app.js",
   "scripts": {
-    "start": "node dist/app.js",
-    "dev": "ts-node src/app.ts",
-    "build": "tsc",
-    "vercel-build": "echo 'No build step required for serverless functions'",
+    "dev": "vercel dev",
+    "build": "echo 'No build step required for serverless functions'",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "engines": {
@@ -18,19 +15,14 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "@slack/bolt": "^4.3.0",
     "@slack/web-api": "^7.10.0",
-    "@types/node-cron": "^3.0.11",
     "@vercel/node": "^3.2.29",
-    "dotenv": "^16.5.0",
     "googleapis": "^148.0.0",
-    "node-cron": "^4.0.7",
     "uuid": "^11.1.0"
   },
   "devDependencies": {
     "@types/node": "^22.15.16",
     "@types/uuid": "^10.0.0",
-    "ts-node": "^10.9.2",
     "typescript": "^5.8.3"
   }
 }
