@@ -1,11 +1,12 @@
 {
-  "name": "swifty",
+  "name": "swift-coffees",
   "version": "1.0.0",
   "main": "dist/app.js",
   "scripts": {
     "start": "node dist/app.js",
     "dev": "ts-node src/app.ts",
     "build": "tsc",
+    "vercel-build": "echo 'No build step required for serverless functions'",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "engines": {
@@ -18,7 +19,9 @@
   "description": "",
   "dependencies": {
     "@slack/bolt": "^4.3.0",
+    "@slack/web-api": "^7.10.0",
     "@types/node-cron": "^3.0.11",
+    "@vercel/node": "^3.2.29",
     "dotenv": "^16.5.0",
     "googleapis": "^148.0.0",
     "node-cron": "^4.0.7",

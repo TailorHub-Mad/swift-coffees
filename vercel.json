@@ -1,0 +1,13 @@
+{
+  "functions": {
+    "api/**/*.ts": {
+      "runtime": "@vercel/node"
+    }
+  },
+  "crons": [
+    {
+      "path": "/api/coffee-shuffle",
+      "schedule": "0 12 * * 3"
+    }
+  ]
+}
