@@ -1,9 +1,5 @@
 {
-  "functions": {
-    "api/**/*.ts": {
-      "runtime": "@vercel/node"
-    }
-  },
+  "outputDirectory": ".",
   "crons": [
     {
       "path": "/api/coffee-shuffle",
