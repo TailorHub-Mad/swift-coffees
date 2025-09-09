@@ -21,7 +21,7 @@ In your Vercel dashboard, add the following environment variables:
 #### Required Variables:
 - `SLACK_BOT_TOKEN`: Your Slack bot token (starts with `xoxb-`)
 - `SLACK_CHANNEL_ID`: The Slack channel ID where coffee chats will be posted
-- `VERCEL_CRON_SECRET`: A random secret string for cron job security
+- `CRON_SECRET`: A random secret string for cron job security
 
 #### Optional Variables (for Google Meet integration):
 - `GOOGLE_SERVICE_ACCOUNT_JSON`: Your Google service account credentials as JSON string
@@ -58,7 +58,7 @@ https://your-app.vercel.app/api/coffee-shuffle
 
 **Note**: You need to include the authorization header:
 ```
-Authorization: Bearer YOUR_VERCEL_CRON_SECRET
+Authorization: Bearer YOUR_CRON_SECRET
 ```
 
 ## 🏗️ Architecture Changes

@@ -8,11 +8,16 @@ const SLACK_BOT_TOKEN = process.env.SLACK_BOT_TOKEN;
 const SLACK_CHANNEL_ID = process.env.SLACK_CHANNEL_ID;
 const GOOGLE_SERVICE_ACCOUNT_JSON = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
 const GOOGLE_DELEGATED_USER = process.env.GOOGLE_DELEGATED_USER || 'tools@tailor-hub.com';
-const VERCEL_CRON_SECRET = process.env.VERCEL_CRON_SECRET;
+const CRON_SECRET = process.env.CRON_SECRET;
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Verify cron secret for security
-  if (req.headers.authorization !== `Bearer ${VERCEL_CRON_SECRET}`) {
+  if (req.headers.authorization !== `Bearer ${CRON_SECRET}`) {
+    console.log('Authorization failed:', {
+      received: req.headers.authorization,
+      expected: `Bearer ${CRON_SECRET}`,
+      cronSecretExists: !!CRON_SECRET
+    });
     return res.status(401).json({ error: 'Unauthorized' });
   }
 

@@ -12,7 +12,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     environment: {
       slackConfigured: !!process.env.SLACK_BOT_TOKEN && !!process.env.SLACK_CHANNEL_ID,
       googleCalendarConfigured: !!process.env.GOOGLE_SERVICE_ACCOUNT_JSON,
-      cronSecretConfigured: !!process.env.VERCEL_CRON_SECRET,
+      cronSecretConfigured: !!process.env.CRON_SECRET,
     },
     deployment: {
       platform: 'vercel',
