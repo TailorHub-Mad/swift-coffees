@@ -51,7 +51,7 @@ The application is configured to run automatically every Wednesday at 12:00 PM U
 
 ## 🔧 Manual Trigger
 
-You can manually trigger the coffee shuffle by making a POST request to:
+You can manually trigger the coffee shuffle by making a GET request to:
 ```
 https://your-app.vercel.app/api/coffee-shuffle
 ```
