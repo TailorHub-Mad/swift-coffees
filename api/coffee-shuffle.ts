@@ -2,7 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { WebClient } from '@slack/web-api';
 import { google, calendar_v3 } from 'googleapis';
 import { createGoogleMeetEvent, createGroups, getChannelMembers } from '../src/utils';
-import { GROUP_SIZE, MEET_DURATION, MINUTES_UNTIL_START } from '../src/constants';
+import { GROUP_SIZE, MEET_DURATION } from '../src/constants';
 
 const SLACK_BOT_TOKEN = process.env.SLACK_BOT_TOKEN;
 const SLACK_CHANNEL_ID = process.env.SLACK_CHANNEL_ID;
@@ -102,9 +102,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     let allEventsScheduled = true;
     let hasErrors = false;
 
-    // Schedule meeting for current time + configured minutes
+    // Schedule meeting to start immediately
     const now = new Date();
-    const meetingStartTime = new Date(now.getTime() + MINUTES_UNTIL_START * 60000);
+    const meetingStartTime = new Date(now.getTime());
 
     // Process each group
     for (let i = 0; i < groups.length; i++) {
