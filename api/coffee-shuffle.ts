@@ -10,6 +10,8 @@ const GOOGLE_SERVICE_ACCOUNT_JSON = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
 const GOOGLE_DELEGATED_USER = process.env.GOOGLE_DELEGATED_USER || 'tools@tailor-hub.com';
 const CRON_SECRET = process.env.CRON_SECRET;
 
+const TRIGGER_HOUR = 12;
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Verify cron secret for security
   if (req.headers.authorization !== `Bearer ${CRON_SECRET}`) {
@@ -24,6 +26,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Only allow GET requests
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  // Guard: only run when it's actually 12:00 PM in Madrid (handles CET/CEST automatically)
+  const currentHour = parseInt(
+    new Date().toLocaleString('en-US', { timeZone: 'Europe/Madrid', hour: 'numeric', hour12: false })
+  );
+
+  if (currentHour !== TRIGGER_HOUR) {
+    console.log(`⏰ Skipping: current Madrid hour is ${currentHour}, expected 12`);
+    return res.status(200).json({ skipped: true, reason: 'Not noon in Madrid' });
   }
 
   try {
